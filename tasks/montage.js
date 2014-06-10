@@ -10,7 +10,7 @@ module.exports = function (grunt) {
   // Build a CSS rule in the format 'selector { property: value; [... property: value;] }'
   function buildRule(selector, properties) {
     return selector + " { " + Object.keys(properties).map(function (property) {
-      return property + ": " + properties[property] + ";";
+      return property + ": " + properties[property] + ";\n";
     }).join(" ") + " }\n";
   }
 
@@ -25,7 +25,8 @@ module.exports = function (grunt) {
           outputImage: "montage.png",
           outputStylesheet: "montage.css",
           baseRules: {},
-          magick: {}
+          magick: {},
+          htmlImagePrefix: ""
         };
 
     // Configuration
@@ -39,13 +40,21 @@ module.exports = function (grunt) {
 
     if ('size' in this.data.options) {
       options.width = this.data.options['size'];
-      options.height = this.data.options['height'];
+      options.height = this.data.options['size'];
     } else {
       options.width = options.height = 16;
     }
 
+    if ('width' in this.data.options) {
+      options.width = this.data.options['width'];
+    }
+    if ('height' in this.data.options) {
+      options.height = this.data.options['height'];
+    }
+
     // Add necessary style rules to the base CSS
-    options.baseRules.background = "url('" + options.outputImage + "') no-repeat";
+    options.baseRules['background-image'] = "url('" + options.outputImage + "')";
+    options.baseRules['background-repeat'] = "no-repeat";
     options.baseRules.width = options.width + "px";
     options.baseRules.height = options.height + "px";
 
@@ -66,10 +75,9 @@ module.exports = function (grunt) {
         return true;
       }),
           dest = path.join(files.dest, options.outputImage),
-          sqrt = Math.sqrt(src.length),
-          rows = Math.floor(sqrt),
-          cols = Math.ceil(sqrt),
-          css = buildRule(options.prefix, options.baseRules);
+          rows = 1,
+          cols = src.length,
+          css = "";
 
       // Create the output directory if necessary (ImageMagick errors if it doesn't exist)
       if (!grunt.file.exists(files.dest)) {
@@ -80,8 +88,12 @@ module.exports = function (grunt) {
       css += src.map(function (image, i) {
         var offsetLeft = (-options.width * (i % cols)) + "px",
             offsetTop = (-options.height * Math.floor(i / cols)) + "px",
-            className = path.basename(image).replace(/\.\w+$/, "").replace(rSpecial, "\\$1");
-        return buildRule(options.prefix + "." + className, {
+            className = path.basename(image).replace(/\.\w+$/, "").replace(rSpecial, "_");
+        return buildRule('.' + className, {
+          'background-image': "url('" + options.htmlImagePrefix + options.outputImage + "')",
+          'background-repeat': "no-repeat",
+          width: options.width + "px",
+          height: options.height + "px",
           "background-position": offsetLeft + " " + offsetTop
         });
       }).join("");
